@@ -8,7 +8,6 @@
 
 namespace He110\Coral\Bot;
 
-
 use He110\Coral\Bot\Entity\User;
 use He110\Coral\Bot\Exception\UnknownEventException;
 use He110\Coral\Bot\Interfaces\DataManager;
@@ -21,6 +20,8 @@ use TelegramBot\Api\Types\Update;
 
 class Application extends ProductHelper
 {
+    use EventHandlers;
+
     /** @var LoggerInterface|null */
     private $logger;
 
@@ -44,9 +45,6 @@ class Application extends ProductHelper
 
     /** @var DataManager */
     private $dataManager;
-
-    /** @var \Closure|null */
-    private $onError = null;
 
     const EVENT_LOGIN = 'login';
     const EVENT_SEARCH = 'search';
@@ -83,7 +81,7 @@ class Application extends ProductHelper
     /**
      * @return Client
      */
-    private function getService(): Client
+    public function getService(): Client
     {
         return $this->service;
     }
@@ -146,18 +144,12 @@ class Application extends ProductHelper
             }
         });
 
-        try {
-            $this->getService()->run();
+        $this->getService()->run();
 
-            if (is_null($this->getEvent()))
-                throw new UnknownEventException("Got an unknown event");
+        if (is_null($this->getEvent()) || !method_exists($this, $this->getEvent()))
+            throw new UnknownEventException("Got an unknown event");
 
-        } catch (\Exception $e) {
-            if ($closure = $this->getOnError())
-                $closure($e);
-            else
-                throw $e;
-        }
+        $this->{$this->getEvent()}($this);
     }
 
     private function fetchDataFromMessage(Message $message): void
@@ -216,24 +208,6 @@ class Application extends ProductHelper
     public function setEvent(string $event): self
     {
         $this->event = $event;
-        return $this;
-    }
-
-    /**
-     * @return \Closure|null
-     */
-    public function getOnError(): ?\Closure
-    {
-        return $this->onError;
-    }
-
-    /**
-     * @param \Closure|null $onError
-     * @return Application
-     */
-    public function setOnError(?\Closure $onError): self
-    {
-        $this->onError = $onError;
         return $this;
     }
 }

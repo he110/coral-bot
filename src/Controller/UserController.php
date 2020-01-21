@@ -9,6 +9,7 @@
 namespace He110\Coral\Bot\Controller;
 
 
+use He110\Coral\Bot\Application;
 use He110\Coral\Bot\Interfaces\AppControllerInterface;
 use He110\Coral\Bot\Service\CoralRestClient;
 
@@ -16,11 +17,13 @@ class UserController implements AppControllerInterface
 {
     private $baseUrl;
     private $countryCode;
+    private $application;
 
-    public function __construct(string $baseUrl, string $countryCode)
+    public function __construct(Application &$app)
     {
-        $this->baseUrl = $baseUrl;
-        $this->countryCode = $countryCode;
+        $this->baseUrl = $app->getBaseUrl();
+        $this->countryCode = $app->getUser() ? $app->getUser()->getCountry() ?? "RU" : "RU";
+        $this->application = $app;
     }
 
 
@@ -34,7 +37,7 @@ class UserController implements AppControllerInterface
 
     public function countryList(): ?array
     {
-        if ($list = CoralRestClient::get($this->countryCode, $this->baseUrl, 'country')) {
+        if ($list = CoralRestClient::get($this->countryCode, $this->baseUrl, 'country?platform=tg')) {
             $result = array();
             foreach ($list as $region) {
                 foreach($region as $country)

@@ -150,7 +150,7 @@ class Application extends ProductHelper
 
         $this->getService()->callbackQuery(function(CallbackQuery $query) use ($app) {
             $message = $query->getMessage();
-
+            $message->setFrom($query->getFrom());
             $app->fetchDataFromMessage($message);
 
             preg_match('/\!(.*?)=(.*)/', $query->getData(), $commandMatch);

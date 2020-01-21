@@ -14,16 +14,16 @@ use He110\Coral\Bot\Service\ArraySerializer;
 class Product extends ArraySerializer
 {
     /** @var string|null */
-    private $code;
+    protected $code;
 
     /** @var string|null */
-    private $name;
+    protected $name;
 
     /** @var string|null */
-    private $description;
+    protected $description;
 
     /** @var ProductOffer[] */
-    private $offers = array();
+    protected $offers = array();
 
     /**
      * @return string|null
@@ -96,6 +96,4 @@ class Product extends ArraySerializer
         $this->offers = $offers;
         return $this;
     }
-
-
 }

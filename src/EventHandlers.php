@@ -9,8 +9,9 @@
 namespace He110\Coral\Bot;
 
 
+use He110\Coral\Bot\Controller\ProductController;
 use He110\Coral\Bot\Controller\UserController;
-use He110\Coral\Bot\Entity\User;
+use He110\Coral\Bot\Entity\ProductOffer;
 use TelegramBot\Api\BotApi;
 use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 
@@ -43,7 +44,7 @@ trait EventHandlers
         $bot = $application->getService();
         $bot->sendChatAction($application->getChatId(), 'typing');
         $user = $application->getUser();
-        $controller = new UserController($application->getBaseUrl(), $user->getCountry() ?? 'RU');
+        $controller = new UserController($application);
         $isValid = $controller->validate($application->getContent());
 
         if ($isValid) {
@@ -56,13 +57,21 @@ trait EventHandlers
         }
     }
 
+    /**
+     * Пользователь ввел
+     *
+     * @param Application $application
+     * @throws Exception\UnknownEventException
+     * @throws \TelegramBot\Api\Exception
+     * @throws \TelegramBot\Api\InvalidArgumentException
+     */
     public function getCountryList(Application &$application)
     {
         /** @var BotApi $bot */
         $bot = $application->getService();
 
         $user = $application->getUser();
-        $controller = new UserController($application->getBaseUrl(), $user->getCountry() ?? 'RU');
+        $controller = new UserController($application);
 
         if ($countries = $controller->countryList()) {
 
@@ -95,6 +104,13 @@ trait EventHandlers
         }
     }
 
+    /**
+     * Пользователь нажал на кнопку выбора страны
+     *
+     * @param Application $application
+     * @throws \TelegramBot\Api\Exception
+     * @throws \TelegramBot\Api\InvalidArgumentException
+     */
     public function setCountry(Application &$application)
     {
         /** @var BotApi $bot */
@@ -106,5 +122,80 @@ trait EventHandlers
             $manager->save($user->getId(), $user->toArray());
 
         $bot->sendMessage($application->getChatId(), 'Все готово! Введите артикул товара или поисковой запрос для начала работы');
+    }
+
+    public function getOffer(Application &$application)
+    {
+        /** @var BotApi $bot */
+        $bot = $application->getService();
+        $user = $application->getUser();
+
+        $controller = new ProductController($application);
+        if ($offer = $controller->getOfferById($application->getContent(), $user->getCurrency() ?? 'RUB')) {
+            $bot->sendChatAction($application->getChatId(), 'upload_photo');
+
+
+            $keyboardMarkup = array(
+                array(
+                    array(
+                        'text' => 'В магазин',
+                        'url' => $offer->getLink()
+                    ),
+                ),
+            );
+            $keyboard = new InlineKeyboardMarkup($keyboardMarkup);
+
+            $bot->sendPhoto($application->getChatId(), $offer->getThumbnail(), $controller->renderOffer($offer), null, $keyboard);
+            $user->setLastOffer($offer->getCode());
+            if ($manager = $application->getDataManager())
+                $manager->save($user->getId(), $user->toArray());
+        } else {
+            $bot->sendMessage($application->getChatId(), 'Не удалось найти товар по артикулу. Ищу по названию...');
+            $application->triggerEvent(Application::EVENT_SEARCH);
+        }
+    }
+
+    public function search(Application &$application)
+    {
+        /** @var BotApi $bot */
+        $bot = $application->getService();
+        $user = $application->getUser();
+
+        $controller = new ProductController($application);
+
+        if ($list = $controller->search($application->getContent(), $user->getCurrency() ?? 'RUB')) {
+            switch (count($list)) {
+                case 0:
+                    $bot->sendMessage($application->getChatId(), 'По вашему запросу ничего не найдено');
+                    break;
+                case 1:
+                    /** @var ProductOffer $offer */
+                    $offer = current($list);
+                    $application->setContent($offer->getCode());
+                    $application->triggerEvent(Application::EVENT_GET_OFFER);
+                    break;
+                default:
+                    $list = array_slice($list, 0, 10);
+
+                    $keyboardMarkup = array();
+
+                    $chunks = array_chunk($list, 1);
+                    foreach($chunks as $chunk) {
+                        $list = array();
+                        foreach($chunk as $offer) {
+                            /** @var ProductOffer $offer */
+                            $list[] = array(
+                                'text' => $controller->buildOfferName($offer),
+                                'callback_data' => '!offer='.$offer->getCode()
+                            );
+                        }
+                        $keyboardMarkup[] = $list;
+                    }
+
+                    $keyboard = new InlineKeyboardMarkup($keyboardMarkup);
+                    $bot->sendMessage($application->getChatId(), 'Пожалуйста, выберите продукт', 'html', null, false, $keyboard);
+                    break;
+            }
+        }
     }
 }

@@ -32,7 +32,6 @@ class CoralRestClient
         $client = new Client();
 
         $response = $client->request($method, $url);
-
         if ($response->getStatusCode() < 300)
             return json_decode($response->getBody()->getContents(), true);
         return null;

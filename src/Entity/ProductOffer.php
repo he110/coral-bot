@@ -14,21 +14,61 @@ use He110\Coral\Bot\Service\ArraySerializer;
 class ProductOffer extends ArraySerializer
 {
     /** @var null|string */
-    private $code = null;
+    protected $code = null;
     /** @var string  */
-    private $name = '';
+    protected $name = '';
     /** @var null|string  */
-    private $form = null;
+    protected $form = null;
     /** @var string  */
-    private $description = '';
+    protected $description = '';
     /** @var null|string  */
-    private $thumbnail = null;
+    protected $thumbnail = null;
     /** @var float */
-    private $basePrice = 0.0;
+    protected $basePrice = 0.0;
     /** @var float */
-    private $clubPrice = 0.0;
+    protected $clubPrice = 0.0;
     /** @var int */
-    private $bonus = 0;
+    protected $bonus = 0;
+    /** @var null|string */
+    protected $link = null;
+    /** @var string */
+    protected $currency = 'RUB';
+
+    /**
+     * @return string
+     */
+    public function getCurrency(): string
+    {
+        return $this->currency;
+    }
+
+    /**
+     * @param string $currency
+     * @return ProductOffer
+     */
+    public function setCurrency(string $currency): self
+    {
+        $this->currency = $currency;
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getLink(): ?string
+    {
+        return $this->link;
+    }
+
+    /**
+     * @param string|null $link
+     * @return ProductOffer
+     */
+    public function setLink(?string $link): self
+    {
+        $this->link = $link;
+        return $this;
+    }
 
     /**
      * @return string|null
@@ -173,6 +213,4 @@ class ProductOffer extends ArraySerializer
         $this->bonus = $bonus;
         return $this;
     }
-
-
 }

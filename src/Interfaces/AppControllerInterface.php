@@ -9,7 +9,9 @@
 namespace He110\Coral\Bot\Interfaces;
 
 
+use He110\Coral\Bot\Application;
+
 interface AppControllerInterface
 {
-    public function __construct(string $baseUrl, string $countryCode);
+    public function __construct(Application &$app);
 }

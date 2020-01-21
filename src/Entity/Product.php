@@ -9,7 +9,93 @@
 namespace He110\Coral\Bot\Entity;
 
 
-class Product
+use He110\Coral\Bot\Service\ArraySerializer;
+
+class Product extends ArraySerializer
 {
+    /** @var string|null */
+    private $code;
+
+    /** @var string|null */
+    private $name;
+
+    /** @var string|null */
+    private $description;
+
+    /** @var ProductOffer[] */
+    private $offers = array();
+
+    /**
+     * @return string|null
+     */
+    public function getCode(): ?string
+    {
+        return $this->code;
+    }
+
+    /**
+     * @param string|null $code
+     * @return Product
+     */
+    public function setCode(?string $code): self
+    {
+        $this->code = $code;
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @param string|null $name
+     * @return Product
+     */
+    public function setName(?string $name): self
+    {
+        $this->name = $name;
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    /**
+     * @param string|null $description
+     * @return Product
+     */
+    public function setDescription(?string $description): self
+    {
+        $this->description = $description;
+        return $this;
+    }
+
+    /**
+     * @return ProductOffer[]
+     */
+    public function getOffers(): array
+    {
+        return $this->offers;
+    }
+
+    /**
+     * @param ProductOffer[] $offers
+     * @return Product
+     */
+    public function setOffers(array $offers): self
+    {
+        $this->offers = $offers;
+        return $this;
+    }
+
 
 }

@@ -54,7 +54,7 @@ class Application extends ProductHelper
     const EVENT_GET_PRODUCT = 'getProduct';
     const EVENT_GET_OFFER = 'getOffer';
 
-    public function __construct(\string $token)
+    public function __construct(string $token)
     {
         $this->token = $token;
         $this->service = new Client($token);
@@ -94,50 +94,63 @@ class Application extends ProductHelper
         return $this->content;
     }
 
+    /**
+     * @param string|null $content
+     * @return Application
+     */
+    public function setContent(?string $content): self
+    {
+        $this->content = $content;
+        return $this;
+    }
+
+
     public function run(): void
     {
-        $this->getService()->command('start', function(Message $message) {
-             $this->setEvent(self::EVENT_LOGIN);
-             $this->fetchDataFromMessage($message);
+        $app = &$this;
+
+        $this->getService()->command('start', function(Message $message) use ($app) {
+            $app->setEvent(Application::EVENT_LOGIN);
+            $app->fetchDataFromMessage($message);
         });
 
-        $this->getService()->on(function(Update $update) {
+        $this->getService()->on(function(Update $update) use ($app) {
             $message = $update->getMessage();
-            $this->fetchDataFromMessage($message);
+            $app->fetchDataFromMessage($message);
 
-            if ($this->isOfferCode($this->getContent()))
-                $this->setEvent(self::EVENT_GET_OFFER);
-            elseif (is_null($this->getUser()))
-                $this->setEvent(self::EVENT_LOGIN);
-            elseif (!is_null($this->getUser()) && is_null($this->getUser()->getCountry()))
-                $this->setEvent(self::EVENT_GET_COUNTRY_LIST);
-            elseif (!is_null($this->getUser()) && !is_null($this->getUser()->getCountry()))
-                $this->setEvent(self::EVENT_SEARCH);
+            if ($app->isOfferCode($app->getContent()))
+                $app->setEvent(Application::EVENT_GET_OFFER);
+            elseif (is_null($app->getUser()))
+                $app->setEvent(Application::EVENT_LOGIN);
+            elseif (!is_null($app->getUser()) && is_null($app->getUser()->getCountry()))
+                $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
+            elseif (!is_null($app->getUser()) && !is_null($app->getUser()->getCountry()))
+                $app->setEvent(Application::EVENT_SEARCH);
         }, function (Update $update) { return true; });
 
-        $this->getService()->callbackQuery(function(CallbackQuery $query) {
+        $this->getService()->callbackQuery(function(CallbackQuery $query) use ($app) {
             $message = $query->getMessage();
-            $this->fetchDataFromMessage($message);
+            $app->fetchDataFromMessage($message);
 
             preg_match('/\!(.*?)=(.*)/', $query->getData(), $commandMatch);
             if (!isset($commandMatch[1]) || !isset($commandMatch[2]))
                 return;
 
             list($command, $value) = array_slice($commandMatch, 1);
-            $this->content = $value;
+            $app->setContent($value);
 
             switch ($command) {
                 case 'product':
-                    $this->setEvent(self::EVENT_GET_PRODUCT);
+                    $app->setEvent(Application::EVENT_GET_PRODUCT);
                     break;
                 case 'offer':
-                    $this->setEvent(self::EVENT_GET_OFFER);
+                    $app->setEvent(Application::EVENT_GET_OFFER);
                     break;
                 case 'country':
-                    $this->setEvent(self::EVENT_SET_COUNTRY);
+                    $app->setEvent(Application::EVENT_SET_COUNTRY);
                     break;
                 case 'currency':
-                    $this->setEvent(self::EVENT_SET_CURRENCY);
+                    $app->setEvent(Application::EVENT_SET_CURRENCY);
                     break;
                 default:
                     break;
@@ -152,7 +165,7 @@ class Application extends ProductHelper
         $this->{$this->getEvent()}($this);
     }
 
-    private function fetchDataFromMessage(Message $message): void
+    public function fetchDataFromMessage(Message $message): void
     {
         $this->chatId = $message->getChat()->getId();
         $this->content = $message->getText();

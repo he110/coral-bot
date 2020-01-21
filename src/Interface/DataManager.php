@@ -26,5 +26,13 @@ interface DataManager
      * @param string $key
      * @return array
      */
-    public function load(string $key): array;
+    public function load(string $key): ?array;
+
+    /**
+     * Сбрасывает/удаляет данные по ключу
+     *
+     * @param string $key
+     * @return bool
+     */
+    public function reset(string $key): bool;
 }

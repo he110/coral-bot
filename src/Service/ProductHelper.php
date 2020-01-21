@@ -32,7 +32,8 @@ class ProductHelper
     {
         preg_match_all('!\d+!', $string, $matches);
         if (count($matches) > 0) {
-            return intval(trim(implode('', current($matches))));
+            $result = intval(trim(implode('', current($matches))));
+            return $result == 0 ? null : $result;
         }
         return null;
     }

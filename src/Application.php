@@ -138,7 +138,7 @@ class Application extends ProductHelper
                 return;
             $app->fetchDataFromMessage($message);
 
-            if ($this->isUserAuthorized() && $this->getUser()->getCountry() && $app->isOfferCode($app->getContent()))
+            if ($app->isUserAuthorized() && $app->getUser()->getCountry() && $app->isOfferCode($app->getContent()))
                 $app->setEvent(Application::EVENT_GET_OFFER); //Если авторизован, выбрана страна и пришло число - ищет по артикулу
             elseif (!$this->isUserAuthorized())
                 $app->setEvent(Application::EVENT_LOGIN); // Если не авторизован, отправляем в на авторизацию

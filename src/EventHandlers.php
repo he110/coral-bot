@@ -67,7 +67,7 @@ trait EventHandlers
         if ($countries = $controller->countryList()) {
 
             $keyboardMarkup = array();
-            if (count($countries) > 0) {
+            if (count($countries) > 1) {
                 $chunks = array_chunk($countries, 3);
                 foreach($chunks as $chunk) {
                     $list = array();
@@ -83,7 +83,8 @@ trait EventHandlers
                 $bot->sendMessage($application->getChatId(), 'Пожалуйста, выберите страну', false, null, false, $keyboard);
             } else {
                 $country = current($countries);
-                $bot->sendMessage($application->getChatId(), 'В данный момент момент поддерживается только '.$country['NAME']);
+                $bot->sendMessage($application->getChatId(), 'Страна выбрана автоматически: '.$country['NAME']);
+                $bot->sendMessage($application->getChatId(), 'Все готово! Введите артикул товара или поисковой запрос для начала работы');
                 $user->setCountry($country['ALPHA_2']);
                 if ($manager = $application->getDataManager())
                     $manager->save($user->getId(), $user->toArray());
@@ -92,5 +93,18 @@ trait EventHandlers
             $bot->sendMessage($application->getChatId(), 'Не удалось загрузить список стран. Пожалуйста, повторите попытку позже');
             $application->triggerEvent(Application::EVENT_START);
         }
+    }
+
+    public function setCountry(Application &$application)
+    {
+        /** @var BotApi $bot */
+        $bot = $application->getService();
+        $user = $application->getUser();
+
+        $user->setCountry($application->getContent());
+        if ($manager = $application->getDataManager())
+            $manager->save($user->getId(), $user->toArray());
+
+        $bot->sendMessage($application->getChatId(), 'Все готово! Введите артикул товара или поисковой запрос для начала работы');
     }
 }

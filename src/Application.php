@@ -46,6 +46,9 @@ class Application extends ProductHelper
     /** @var DataManager */
     private $dataManager;
 
+    const PAUSES = 1;
+
+    const EVENT_START = 'start';
     const EVENT_LOGIN = 'login';
     const EVENT_SEARCH = 'search';
     const EVENT_SET_COUNTRY = 'setCountry';
@@ -89,7 +92,7 @@ class Application extends ProductHelper
     /**
      * @return string|null
      */
-    private function getContent(): ?string
+    public function getContent(): ?string
     {
         return $this->content;
     }
@@ -104,13 +107,17 @@ class Application extends ProductHelper
         return $this;
     }
 
+    public function isUserAuthorized(): bool
+    {
+        return !is_null($this->getUser()) && $this->getUser()->isAuthorized();
+    }
 
     public function run(): void
     {
         $app = &$this;
 
         $this->getService()->command('start', function(Message $message) use ($app) {
-            $app->setEvent(Application::EVENT_LOGIN);
+            $app->setEvent(Application::EVENT_START);
             $app->fetchDataFromMessage($message);
         });
 
@@ -118,13 +125,13 @@ class Application extends ProductHelper
             $message = $update->getMessage();
             $app->fetchDataFromMessage($message);
 
-            if ($app->isOfferCode($app->getContent()))
+            if ($this->isUserAuthorized() && $app->isOfferCode($app->getContent()))
                 $app->setEvent(Application::EVENT_GET_OFFER);
-            elseif (is_null($app->getUser()))
+            elseif (!$this->isUserAuthorized())
                 $app->setEvent(Application::EVENT_LOGIN);
-            elseif (!is_null($app->getUser()) && is_null($app->getUser()->getCountry()))
+            elseif ($this->isUserAuthorized() && is_null($app->getUser()->getCountry()))
                 $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
-            elseif (!is_null($app->getUser()) && !is_null($app->getUser()->getCountry()))
+            elseif ($this->isUserAuthorized() && !is_null($app->getUser()->getCountry()))
                 $app->setEvent(Application::EVENT_SEARCH);
         }, function (Update $update) { return true; });
 
@@ -159,9 +166,11 @@ class Application extends ProductHelper
 
         $this->getService()->run();
 
-        if (is_null($this->getEvent()) || !method_exists($this, $this->getEvent()))
+        if (is_null($this->getEvent()))
             throw new UnknownEventException("Got an unknown event");
 
+        if (!method_exists($this, $this->getEvent()))
+            throw new UnknownEventException("Can't find handler for event ".$this->getEvent());
         $this->{$this->getEvent()}($this);
     }
 
@@ -169,6 +178,17 @@ class Application extends ProductHelper
     {
         $this->chatId = $message->getChat()->getId();
         $this->content = $message->getText();
+        if ($this->getDataManager() && is_null($this->getUser())) {
+            $user = new User();
+            if ($userData = $this->getDataManager()->load($message->getFrom()->getId())) {
+                $user->fromArray($userData);
+                $this->user = $user;
+            }
+            $user->setId($message->getFrom()->getId())
+                ->setName(trim($message->getFrom()->getFirstName()." ".$message->getFrom()->getLastName()));
+            $this->getDataManager()->save($message->getFrom()->getId(), $user->toArray());
+
+        }
     }
 
     /**
@@ -189,9 +209,9 @@ class Application extends ProductHelper
 
 
     /**
-     * @return DataManager
+     * @return DataManager|null
      */
-    public function getDataManager(): DataManager
+    public function getDataManager(): ?DataManager
     {
         return $this->dataManager;
     }

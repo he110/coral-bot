@@ -9,22 +9,27 @@
 namespace He110\Coral\Bot\Entity;
 
 
-class User
+use He110\Coral\Bot\Service\ArraySerializer;
+
+class User extends ArraySerializer
 {
     /** @var string */
-    private $name;
+    protected $name;
 
     /** @var string|null */
-    private $country;
+    protected $country;
 
     /** @var string|null */
-    private $currency;
+    protected $currency;
 
     /** @var int|null */
-    private $id;
+    protected $id;
 
     /** @var int|null */
-    private $lastOffer;
+    protected $lastOffer;
+
+    /** @var int|null */
+    protected $member;
 
     /**
      * @return string
@@ -116,5 +121,26 @@ class User
         return $this;
     }
 
+    /**
+     * @return int|null
+     */
+    public function getMember(): ?int
+    {
+        return $this->member;
+    }
 
+    public function isAuthorized(): bool
+    {
+        return !is_null($this->member);
+    }
+
+    /**
+     * @param int|null $member
+     * @return User
+     */
+    public function setMember(?int $member): self
+    {
+        $this->member = $member;
+        return $this;
+    }
 }

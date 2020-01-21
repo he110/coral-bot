@@ -22,24 +22,9 @@ class JsonDataManager implements DataManager
     /** @var string */
     private $filename = 'json_data_manager_content.json';
 
-    public function __construct()
+    public function __construct(string $filePath = 'jsonDataManager.json')
     {
-        $this->getFilePath();
-    }
-
-    /**
-     * Проверяет наличие файла данных. В случае отстутствия создает
-     * Возвращает полный путь к файлу
-     *
-     * @return string - Путь к файлу с данными
-     */
-    private function getFilePath(): string
-    {
-        $dir = isset($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] : __DIR__."/../../../";
-        $file = $dir.$this->getFilename();
-        if (!file_exists($file))
-            $this->saveAllData([]);
-        return realpath($file);
+        $this->setFilename($filePath);
     }
 
     /**
@@ -56,10 +41,9 @@ class JsonDataManager implements DataManager
      */
     public function setFilename(string $filename): self
     {
-        if ($filename != $this->filename) {
-            $this->filename = $filename;
-            $this->getFilePath();
-        }
+        $this->filename = $filename;
+        if (!file_exists($filename))
+            file_put_contents($filename, json_encode([]));
         return $this;
     }
 
@@ -69,18 +53,23 @@ class JsonDataManager implements DataManager
      */
     public function save(string $key, array $data): bool
     {
-        $data = $this->getAllData();
-        $data[$key] = $data;
-        return $this->saveAllData($data);
+        $loaded = $this->getAllData();
+        if (!isset($loaded[$key]))
+            $loaded[$key] = $data;
+        else {
+            foreach($data as $prop => $value)
+                $loaded[$key][$prop] = $value;
+        }
+        return $this->saveAllData($loaded);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function load(string $key): array
+    public function load(string $key): ?array
     {
-        $data = $this->getAllData();
-        return isset($data[$key]) ? $data[$key] : null;
+        $loaded = $this->getAllData();
+        return isset($loaded[$key]) ? $loaded[$key] : null;
     }
 
     /**
@@ -88,21 +77,21 @@ class JsonDataManager implements DataManager
      */
     public function reset(string $key): bool
     {
-        $data = $this->getAllData();
-        if (isset($data[$key])) {
-            unset($data[$key]);
-            return $this->saveAllData($data);
+        $loaded = $this->getAllData();
+        if (isset($loaded[$key])) {
+            unset($loaded[$key]);
+            return $this->saveAllData($loaded);
         }
         return true;
     }
 
     private function getAllData(): array
     {
-        return json_decode(file_get_contents($this->getFilePath()), true);
+        return json_decode(file_get_contents($this->getFilename()), true);
     }
 
     private function saveAllData(array $data): bool
     {
-        return (bool)file_put_contents($this->getFilePath(), json_encode($data, JSON_UNESCAPED_UNICODE));
+        return (bool)file_put_contents($this->getFilename(), json_encode($data, JSON_UNESCAPED_UNICODE));
     }
 }

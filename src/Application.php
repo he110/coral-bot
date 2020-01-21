@@ -15,6 +15,7 @@ use He110\Coral\Bot\Service\ProductHelper;
 use Psr\Log\LoggerInterface;
 use TelegramBot\Api\Client;
 use TelegramBot\Api\Types\CallbackQuery;
+use TelegramBot\Api\Types\Chat;
 use TelegramBot\Api\Types\Message;
 use TelegramBot\Api\Types\Update;
 
@@ -46,6 +47,8 @@ class Application extends ProductHelper
     /** @var DataManager */
     private $dataManager;
 
+    protected $baseUrl;
+
     const PAUSES = 1;
 
     const EVENT_START = 'start';
@@ -57,10 +60,19 @@ class Application extends ProductHelper
     const EVENT_GET_PRODUCT = 'getProduct';
     const EVENT_GET_OFFER = 'getOffer';
 
-    public function __construct(string $token)
+    public function __construct(string $token, string $baseUrl)
     {
         $this->token = $token;
+        $this->baseUrl = $baseUrl;
         $this->service = new Client($token);
+    }
+
+    /**
+     * @return string
+     */
+    public function getBaseUrl(): string
+    {
+        return $this->baseUrl;
     }
 
     /**
@@ -122,21 +134,23 @@ class Application extends ProductHelper
         });
 
         $this->getService()->on(function(Update $update) use ($app) {
-            $message = $update->getMessage();
+            if (!$message = $update->getMessage())
+                return;
             $app->fetchDataFromMessage($message);
 
-            if ($this->isUserAuthorized() && $app->isOfferCode($app->getContent()))
-                $app->setEvent(Application::EVENT_GET_OFFER);
+            if ($this->isUserAuthorized() && $this->getUser()->getCountry() && $app->isOfferCode($app->getContent()))
+                $app->setEvent(Application::EVENT_GET_OFFER); //Если авторизован, выбрана страна и пришло число - ищет по артикулу
             elseif (!$this->isUserAuthorized())
-                $app->setEvent(Application::EVENT_LOGIN);
+                $app->setEvent(Application::EVENT_LOGIN); // Если не авторизован, отправляем в на авторизацию
             elseif ($this->isUserAuthorized() && is_null($app->getUser()->getCountry()))
-                $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
+                $app->setEvent(Application::EVENT_GET_COUNTRY_LIST); //Если авторизован, но не выбрал страну, отправляем на выбор стран
             elseif ($this->isUserAuthorized() && !is_null($app->getUser()->getCountry()))
-                $app->setEvent(Application::EVENT_SEARCH);
+                $app->setEvent(Application::EVENT_SEARCH); // Если авторизован и выбрал страну, но пришло не число, значит что-то ищет
         }, function (Update $update) { return true; });
 
         $this->getService()->callbackQuery(function(CallbackQuery $query) use ($app) {
             $message = $query->getMessage();
+
             $app->fetchDataFromMessage($message);
 
             preg_match('/\!(.*?)=(.*)/', $query->getData(), $commandMatch);
@@ -169,9 +183,14 @@ class Application extends ProductHelper
         if (is_null($this->getEvent()))
             throw new UnknownEventException("Got an unknown event");
 
-        if (!method_exists($this, $this->getEvent()))
-            throw new UnknownEventException("Can't find handler for event ".$this->getEvent());
-        $this->{$this->getEvent()}($this);
+        $this->triggerEvent($this->getEvent());
+    }
+
+    public function triggerEvent(string $event)
+    {
+        if (!method_exists($this, $event))
+            throw new UnknownEventException("Can't find handler for event ".$event);
+        $this->{$event}($this);
     }
 
     public function fetchDataFromMessage(Message $message): void
@@ -187,6 +206,7 @@ class Application extends ProductHelper
             $user->setId($message->getFrom()->getId())
                 ->setName(trim($message->getFrom()->getFirstName()." ".$message->getFrom()->getLastName()));
             $this->getDataManager()->save($message->getFrom()->getId(), $user->toArray());
+            $this->user = $user;
 
         }
     }

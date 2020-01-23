@@ -172,7 +172,6 @@ trait EventHandlers
             if ($manager = $application->getDataManager())
                 $manager->save($user->getId(), $user->toArray());
         } else {
-            $bot->sendMessage($application->getChatId(), 'Не удалось найти товар по артикулу. Ищу по названию...');
             $application->triggerEvent(Application::EVENT_SEARCH);
         }
     }

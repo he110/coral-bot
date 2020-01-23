@@ -26,10 +26,10 @@ class User extends ArraySerializer
     protected $id;
 
     /** @var int|null */
-    protected $lastOffer;
-
-    /** @var int|null */
     protected $member;
+
+    /** @var array */
+    protected $options = array();
 
     /**
      * @return string
@@ -106,24 +106,6 @@ class User extends ArraySerializer
     /**
      * @return int|null
      */
-    public function getLastOffer(): ?int
-    {
-        return $this->lastOffer;
-    }
-
-    /**
-     * @param int|null $lastOffer
-     * @return User
-     */
-    public function setLastOffer(?int $lastOffer): self
-    {
-        $this->lastOffer = $lastOffer;
-        return $this;
-    }
-
-    /**
-     * @return int|null
-     */
     public function getMember(): ?int
     {
         return $this->member;
@@ -141,6 +123,45 @@ class User extends ArraySerializer
     public function setMember(?int $member): self
     {
         $this->member = $member;
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getOptions(): array
+    {
+        return $this->options;
+    }
+
+    /**
+     * @param string $key
+     * @return mixed|null
+     */
+    public function getOption(string $key)
+    {
+        return isset($this->options[$key]) ? $this->options[$key] : null;
+    }
+
+    /**
+     * @param string $key
+     * @param $value
+     * @return User
+     */
+    public function setOption(string $key, $value): self
+    {
+        $this->options[$key] = $value;
+        return $this;
+    }
+
+    /**
+     * @param string $key
+     * @return User
+     */
+    public function removeOption(string $key): self
+    {
+        if (isset($this->options[$key]))
+            unset($this->options[$key]);
         return $this;
     }
 }

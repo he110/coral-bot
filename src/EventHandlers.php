@@ -145,8 +145,9 @@ trait EventHandlers
             );
             $keyboard = new InlineKeyboardMarkup($keyboardMarkup);
 
-            $bot->sendPhoto($application->getChatId(), $offer->getThumbnail(), $controller->renderOffer($offer), null, $keyboard);
-            $user->setLastOffer($offer->getCode());
+            $m = $bot->sendPhoto($application->getChatId(), $offer->getThumbnail(), $controller->renderOffer($offer), null, $keyboard);
+            $user->setOption('lastOfferCode', $offer->getCode())
+                ->setOption('lastMessageId', $m->getMessageId());
             if ($manager = $application->getDataManager())
                 $manager->save($user->getId(), $user->toArray());
         } else {

@@ -30,6 +30,7 @@ class CoralRestClient
     private static function request(string $url, array $data = array(), string $method = 'GET'): ?array
     {
         $client = new Client();
+        $url = $url."?platform=tg";
 
         $response = $client->request($method, $url);
         if ($response->getStatusCode() < 300)

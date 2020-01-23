@@ -36,7 +36,7 @@ class UserController implements AppControllerInterface
 
     public function countryList(): ?array
     {
-        if ($list = CoralRestClient::get($this->countryCode, $this->baseUrl, 'country?platform=tg')) {
+        if ($list = CoralRestClient::get($this->countryCode, $this->baseUrl, 'country')) {
             $result = array();
             foreach ($list as $region) {
                 foreach($region as $country)

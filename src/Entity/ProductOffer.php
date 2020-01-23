@@ -33,6 +33,8 @@ class ProductOffer extends ArraySerializer
     protected $link = null;
     /** @var string */
     protected $currency = 'RUB';
+    /** @var string|null */
+    protected $refLink = null;
 
     /**
      * @return string
@@ -211,6 +213,24 @@ class ProductOffer extends ArraySerializer
     public function setBonus(int $bonus): self
     {
         $this->bonus = $bonus;
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getRefLink(): ?string
+    {
+        return $this->refLink;
+    }
+
+    /**
+     * @param string|null $refLink
+     * @return ProductOffer
+     */
+    public function setRefLink(?string $refLink): self
+    {
+        $this->refLink = $refLink;
         return $this;
     }
 }

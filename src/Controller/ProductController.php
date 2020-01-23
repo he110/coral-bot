@@ -50,7 +50,8 @@ class ProductController implements AppControllerInterface
 
     public function getOfferById(string $id, string $currency = 'RUB'):?ProductOffer
     {
-        $item = CoralRestClient::get($this->countryCode, $this->baseUrl, "catalog/product/{$id}");
+        $user = $this->application->getUser()->getMember();
+        $item = CoralRestClient::get($this->countryCode, $this->baseUrl, "catalog/product/{$id}/{$user}");
         if ($item && isset($item['NAME']) && !empty($item['NAME'])) {
             return $this->offerFromApi($item, $currency);
         }
@@ -72,21 +73,33 @@ class ProductController implements AppControllerInterface
 
     function renderOffer(ProductOffer $offer): string
     {
+        $lineCount = 40;
         $render = array();
         $render[] = $offer->getName();
-        $render[] = str_repeat("–", 30);
+        $render[] = str_repeat("–", $lineCount);
         $render[] = strip_tags($offer->getDescription());
-        $render[] = str_repeat("–", 30);
+        $render[] = str_repeat("–", $lineCount);
 
         $base = $offer->getBasePrice();
         $club = $offer->getClubPrice();
 
-        $render[] = 'Розничная цена:';
-        $render[] = $base;
-        $render[] = "";
-        $render[] = 'Клубная цена:';
-        $render[] = $club;
-        $render[] = "";
+        $currency = $this->getCurrencies()[$offer->getCurrency()];
+
+        if ($base) {
+            $render[] = 'Розничная цена:';
+            $render[] = number_format($base, 2)." ".$currency['text'];
+            $render[] = "";
+        }
+        if ($club) {
+            $render[] = 'Клубная цена:';
+            $render[] = number_format($club, 2)." ".$currency['text'];
+            $render[] = "";
+        }
+        if ($ref = $offer->getRefLink()) {
+            $render[] = "";
+            $render[] = $ref;
+            $render[] = str_repeat("–", $lineCount);
+        }
 
         return implode("\n", $render);
     }
@@ -135,6 +148,8 @@ class ProductController implements AppControllerInterface
     {
         $offer = new ProductOffer();
 
+        $prices = $item['PRICES'][$currency];
+
         $offer->fromArray(array(
             'code'      => $item['CODE'],
             'name'      => $item['NAME'],
@@ -144,8 +159,9 @@ class ProductController implements AppControllerInterface
             'link'      => $item['REFFERAL_LINK'],
             'form'      => $item['FORM'],
             'currency'  => $currency,
-            'basePrice' => floatval($item['PRICE_BASE']),
-            'clubPrice' => floatval($item['PRICE_CLUB'])
+            'basePrice' => floatval($prices['base']),
+            'clubPrice' => floatval($prices['club']),
+            'refLink'   => $item['REFFERAL_LINK']
         ));
         return $offer;
     }
@@ -163,5 +179,15 @@ class ProductController implements AppControllerInterface
             });
         }
         return $result;
+    }
+
+    function convertPrices(float $base, float $club, string $fromCurrency): ?array
+    {
+        if ($response = CoralRestClient::get(
+            $this->countryCode, $this->baseUrl,
+            "general/convertPrice/{$fromCurrency}/{$base}/{$club}")
+        )
+            return $response;
+        return null;
     }
 }

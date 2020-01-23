@@ -38,6 +38,14 @@ trait EventHandlers
         $bot->sendMessage($application->getChatId(), 'Добро пожаловать! Пожалуйста, введите ваш клубный номер');
     }
 
+    public function version(Application &$application)
+    {
+        /** @var BotApi $bot */
+        $bot = $application->getService();
+
+        $bot->sendMessage($application->getChatId(), 'CoralBot v'.Application::VERSION);
+    }
+
     public function login(Application &$application)
     {
         /** @var BotApi $bot */

@@ -23,6 +23,8 @@ class Application extends ProductHelper
 {
     use EventHandlers;
 
+    const VERSION = '0.1';
+
     /** @var LoggerInterface|null */
     private $logger;
 
@@ -62,6 +64,7 @@ class Application extends ProductHelper
     const EVENT_GET_COUNTRY_LIST = 'getCountryList';
     const EVENT_GET_PRODUCT = 'getProduct';
     const EVENT_GET_OFFER = 'getOffer';
+    const EVENT_VERSION = 'version';
 
     public function __construct(string $token, string $baseUrl)
     {
@@ -146,6 +149,11 @@ class Application extends ProductHelper
         $this->getService()->command('start', function(Message $message) use ($app) {
             $app->setEvent(Application::EVENT_START);
             $app->fetchDataFromMessage($message);
+        });
+
+        $this->getService()->command('version', function(Message $message) use ($app) {
+             $app->setEvent(Application::EVENT_VERSION);
+             $app->fetchDataFromMessage($message);
         });
 
         $this->getService()->on(function(Update $update) use ($app) {

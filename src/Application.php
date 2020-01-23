@@ -174,7 +174,7 @@ class Application extends ProductHelper
         $this->getService()->callbackQuery(function(CallbackQuery $query) use ($app) {
             $message = $query->getMessage();
             $message->setFrom($query->getFrom());
-            $app->fetchDataFromMessage($message);
+            $app->fetchDataFromMessage($message, array('callback' => $query->getId()));
 
             preg_match('/\!(.*?)=(.*)/', $query->getData(), $commandMatch);
             if (!isset($commandMatch[1]) || !isset($commandMatch[2]))
@@ -235,8 +235,9 @@ class Application extends ProductHelper
      * Обрабатывает данные, полученные из сообщения
      *
      * @param Message $message
+     * @param array $additional
      */
-    public function fetchDataFromMessage(Message $message): void
+    public function fetchDataFromMessage(Message $message, array $additional = array()): void
     {
         $this->chatId = $message->getChat()->getId();
         $this->content = $message->getText();
@@ -246,11 +247,17 @@ class Application extends ProductHelper
                 $user->fromArray($userData);
                 $this->user = $user;
             }
+
+            foreach($additional as $key => $value)
+                $user->setOption($key, $value);
+
+            if (empty($additional))
+                $user->removeOption('callback');
+
             $user->setId($message->getFrom()->getId())
                 ->setName(trim($message->getFrom()->getFirstName()." ".$message->getFrom()->getLastName()));
             $this->getDataManager()->save($message->getFrom()->getId(), $user->toArray());
             $this->user = $user;
-
         }
     }
 

@@ -13,6 +13,7 @@ use He110\Coral\Bot\Application;
 use He110\Coral\Bot\Entity\ProductOffer;
 use He110\Coral\Bot\Interfaces\AppControllerInterface;
 use He110\Coral\Bot\Service\CoralRestClient;
+use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 
 class ProductController implements AppControllerInterface
 {
@@ -23,9 +24,21 @@ class ProductController implements AppControllerInterface
     private $application;
 
     private $currencies = array(
-        'RUB',
-        'EUR',
-        'USD'
+        'RUB' => array(
+            'code' => 'RUB',
+            'name' => 'RUB',
+            'text' => 'руб'
+        ),
+        'EUR' => array(
+            'code' => 'EUR',
+            'name' => 'ЕUR',
+            'text' => 'EUR'
+        ),
+        'USD' => array(
+            'code' => 'USD',
+            'name' => 'USD',
+            'text' => 'USD'
+        )
     );
 
     public function __construct(Application &$app)
@@ -78,6 +91,36 @@ class ProductController implements AppControllerInterface
         return implode("\n", $render);
     }
 
+    /**
+     * @param ProductOffer $offer
+     * @param string $currency
+     * @return InlineKeyboardMarkup
+     */
+    function generateOfferButtons(ProductOffer $offer, string $currency = 'RUB'): InlineKeyboardMarkup
+    {
+        $buttons = array();
+
+        if ($currencies = $this->getCurrencies($currency)) {
+            foreach($currencies as $currency) {
+                $buttons[] = array(
+                    'text' => $currency['name'],
+                    'callback_data' => '!currency='.$currency['code']
+                );
+            }
+        }
+
+        $keyboardMarkup = array(
+            $buttons,
+            array(
+                array(
+                    'text' => 'В магазин',
+                    'url' => $offer->getLink()
+                ),
+            ),
+        );
+        return new InlineKeyboardMarkup($keyboardMarkup);
+    }
+
     function buildOfferName(ProductOffer $offer): string
     {
         $name = $offer->getName();
@@ -101,8 +144,8 @@ class ProductController implements AppControllerInterface
             'link'      => $item['REFFERAL_LINK'],
             'form'      => $item['FORM'],
             'currency'  => $currency,
-            'basePrice' => $item['PRICE_BASE'],
-            'clubPrice' => $item['PRICE_CLUB']
+            'basePrice' => floatval($item['PRICE_BASE']),
+            'clubPrice' => floatval($item['PRICE_CLUB'])
         ));
         return $offer;
     }
@@ -116,7 +159,7 @@ class ProductController implements AppControllerInterface
         $result = $this->currencies;
         if (!is_null($current)) {
             $result = array_filter($result, function($item) use ($current) {
-                return $item != $current;
+                return $item['code'] != $current;
             });
         }
         return $result;

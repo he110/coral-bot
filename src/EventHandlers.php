@@ -12,6 +12,7 @@ namespace He110\Coral\Bot;
 use He110\Coral\Bot\Controller\ProductController;
 use He110\Coral\Bot\Controller\UserController;
 use He110\Coral\Bot\Entity\ProductOffer;
+use He110\Coral\Bot\Entity\User;
 use TelegramBot\Api\BotApi;
 use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 
@@ -46,6 +47,14 @@ trait EventHandlers
         $bot->sendMessage($application->getChatId(), 'CoralBot v'.Application::VERSION);
     }
 
+    /**
+     * Пользователь ввел клубный номер. Проверяем
+     *
+     * @param Application $application
+     * @throws Exception\UnknownEventException
+     * @throws \TelegramBot\Api\Exception
+     * @throws \TelegramBot\Api\InvalidArgumentException
+     */
     public function login(Application &$application)
     {
         /** @var BotApi $bot */
@@ -66,7 +75,7 @@ trait EventHandlers
     }
 
     /**
-     * Пользователь ввел
+     * Пользователь ввел клубный номер. Необходимо выбрать страну
      *
      * @param Application $application
      * @throws Exception\UnknownEventException
@@ -125,6 +134,8 @@ trait EventHandlers
         $bot = $application->getService();
         $user = $application->getUser();
 
+        $this->answerCallback($application, 'Страна выбрана');
+
         $user->setCountry($application->getContent());
         if ($manager = $application->getDataManager())
             $manager->save($user->getId(), $user->toArray());
@@ -132,6 +143,14 @@ trait EventHandlers
         $bot->sendMessage($application->getChatId(), 'Все готово! Введите артикул товара или поисковой запрос для начала работы');
     }
 
+    /**
+     * Пользователь запросил торговое предложение
+     *
+     * @param Application $application
+     * @throws Exception\UnknownEventException
+     * @throws \TelegramBot\Api\Exception
+     * @throws \TelegramBot\Api\InvalidArgumentException
+     */
     public function getOffer(Application &$application)
     {
         /** @var BotApi $bot */
@@ -142,29 +161,12 @@ trait EventHandlers
         if ($offer = $controller->getOfferById($application->getContent(), $user->getCurrency())) {
             $bot->sendChatAction($application->getChatId(), 'upload_photo');
 
-            $buttons = array();
+            $this->answerCallback($application, 'Данные о продукте получены');
 
-            if ($currencies = $controller->getCurrencies($user->getCurrency())) {
-                foreach($currencies as $currency) {
-                    $buttons[] = array(
-                        'text' => $currency,
-                        'callback_data' => '!currency='.$currency
-                    );
-                }
-            }
+            $keyboard = $controller->generateOfferButtons($offer, $user->getCurrency());
+            $caption =  $controller->renderOffer($offer);
 
-            $keyboardMarkup = array(
-                $buttons,
-                array(
-                    array(
-                        'text' => 'В магазин',
-                        'url' => $offer->getLink()
-                    ),
-                ),
-            );
-            $keyboard = new InlineKeyboardMarkup($keyboardMarkup);
-
-            $m = $bot->sendPhoto($application->getChatId(), $offer->getThumbnail(), $controller->renderOffer($offer), null, $keyboard);
+            $m = $bot->sendPhoto($application->getChatId(), $offer->getThumbnail(), $caption, null, $keyboard);
             $user->setOption('lastOfferCode', $offer->getCode())
                 ->setOption('lastMessageId', $m->getMessageId());
             if ($manager = $application->getDataManager())
@@ -216,6 +218,57 @@ trait EventHandlers
                     $bot->sendMessage($application->getChatId(), 'Пожалуйста, выберите продукт', 'html', null, false, $keyboard);
                     break;
             }
+        }
+    }
+
+    public function setCurrency(Application &$application)
+    {
+        /** @var BotApi $bot */
+        $bot = $application->getService();
+        $user = $application->getUser();
+        $controller = new ProductController($application);
+
+        if ($currency = $application->getContent()) {
+            $user->setCurrency($currency);
+            if ($manager = $application->getDataManager())
+                $manager->save($user->getId(), $user->toArray());
+
+            $offerId = $user->getOption('lastOfferCode');
+            $offer = $controller->getOfferById($offerId, $currency);
+
+            if ($lastMessage = $user->getOption('lastMessageId')) {
+
+                $this->answerCallback($application, 'Валюта обновлена');
+
+                $keyboard = $controller->generateOfferButtons($offer, $user->getCurrency());
+                $caption =  $controller->renderOffer($offer);
+
+                $bot->editMessageCaption($application->getChatId(), $lastMessage, $caption, $keyboard);
+            } else {
+                $bot->sendMessage($application->getChatId(), 'bad');
+                $application->setContent($offerId);
+                $application->triggerEvent(Application::EVENT_GET_OFFER);
+            }
+        }
+    }
+
+    /**
+     * Отправляет ответ на нажатую кнопку
+     *
+     * @param Application $application
+     * @param string $text
+     */
+    protected function answerCallback(Application &$application, string $text): void
+    {
+        /** @var BotApi $bot */
+        $bot = $application->getService();
+        $user = $application->getUser();
+
+        if (!$bot || !$user)
+            return;
+
+        if ($callbackId = $user->getOption('callback')) {
+            $bot->answerCallbackQuery($callbackId,$text);
         }
     }
 }

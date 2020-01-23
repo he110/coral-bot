@@ -26,7 +26,6 @@ class UserController implements AppControllerInterface
         $this->application = $app;
     }
 
-
     public function validate(string $memberId): bool
     {
         if (!is_numeric($memberId))

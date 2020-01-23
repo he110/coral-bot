@@ -84,6 +84,11 @@ class ProductController implements AppControllerInterface
     function offerFromApi(array $item, string $currency): ProductOffer
     {
         $offer = new ProductOffer();
+
+        preg_match_all('(\d*|\.|\,)', $item['PRICE_FORMATED'], $basePrice);
+        $basePrice = array_filter($basePrice[0]);
+        $basePrice = floatval(implode("", $basePrice));
+
         $offer->fromArray(array(
             'code'      => $item['CODE'],
             'name'      => $item['NAME'],
@@ -92,7 +97,8 @@ class ProductController implements AppControllerInterface
             'description' => $item['DETAIL_TEXT'],
             'link'      => $item['REFFERAL_LINK'],
             'form'      => $item['FORM'],
-            'currency'  => $currency
+            'currency'  => $currency,
+            'basePrice' => $basePrice
         ));
         return $offer;
     }

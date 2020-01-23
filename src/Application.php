@@ -47,6 +47,9 @@ class Application extends ProductHelper
     /** @var DataManager */
     private $dataManager;
 
+    /** @var array */
+    private $eventHandlers = array();
+
     protected $baseUrl;
 
     const PAUSES = 1;
@@ -119,11 +122,23 @@ class Application extends ProductHelper
         return $this;
     }
 
+    /**
+     * Проверяет, авторизован ли текущий пользователь
+     *
+     * @return bool
+     */
     public function isUserAuthorized(): bool
     {
         return !is_null($this->getUser()) && $this->getUser()->isAuthorized();
     }
 
+    /**
+     * Выполняет основную работу. Разбирает и анализирует данные от сервера телеграм, определяет
+     * события и вызывает необходимый обработчик
+     *
+     * @throws UnknownEventException
+     * @throws \TelegramBot\Api\InvalidJsonException
+     */
     public function run(): void
     {
         $app = &$this;
@@ -186,13 +201,33 @@ class Application extends ProductHelper
         $this->triggerEvent($this->getEvent());
     }
 
-    public function triggerEvent(string $event)
+    /**
+     * Вызывает обработчик события
+     *
+     * @param string $event
+     * @return Application
+     * @throws UnknownEventException
+     */
+    public function triggerEvent(string $event): self
     {
+        if (isset($this->eventHandlers[$event])) {
+            $this->eventHandlers[$event]($this);
+            return $this;
+        }
+
         if (!method_exists($this, $event))
             throw new UnknownEventException("Can't find handler for event ".$event);
+
         $this->{$event}($this);
+
+        return $this;
     }
 
+    /**
+     * Обрабатывает данные, полученные из сообщения
+     *
+     * @param Message $message
+     */
     public function fetchDataFromMessage(Message $message): void
     {
         $this->chatId = $message->getChat()->getId();
@@ -261,6 +296,19 @@ class Application extends ProductHelper
     public function setEvent(string $event): self
     {
         $this->event = $event;
+        return $this;
+    }
+
+    /**
+     * Позволяет установить обработчик события из вне
+     *
+     * @param string $event
+     * @param \Closure $handler
+     * @return Application
+     */
+    public function setEventHandler(string $event, \Closure $handler): self
+    {
+        $this->eventHandlers[$event] = $handler;
         return $this;
     }
 }

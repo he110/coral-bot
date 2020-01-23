@@ -15,9 +15,13 @@ class CoralRestClient
 {
     public static function get(string $country, string $base, string $endpoint): ?array
     {
-        $country = strtolower($country);
-        $url = "https://{$country}.{$base}/restApi/{$endpoint}";
-        return static::request($url);
+        try {
+            $country = strtolower($country);
+            $url = "https://{$country}.{$base}/restApi/{$endpoint}";
+            return static::request($url);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     public static function post(string $country, string $base, string $endpoint, array $data): ?array

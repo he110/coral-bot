@@ -22,6 +22,12 @@ class ProductController implements AppControllerInterface
 
     private $application;
 
+    private $currencies = array(
+        'RUB',
+        'EUR',
+        'USD'
+    );
+
     public function __construct(Application &$app)
     {
         $this->baseUrl = $app->getBaseUrl();
@@ -31,7 +37,8 @@ class ProductController implements AppControllerInterface
 
     public function getOfferById(string $id, string $currency = 'RUB'):?ProductOffer
     {
-        if ($item = CoralRestClient::get($this->countryCode, $this->baseUrl, "catalog/product/{$id}")) {
+        $item = CoralRestClient::get($this->countryCode, $this->baseUrl, "catalog/product/{$id}");
+        if ($item && isset($item['NAME']) && !empty($item['NAME'])) {
             return $this->offerFromApi($item, $currency);
         }
 
@@ -62,10 +69,10 @@ class ProductController implements AppControllerInterface
         $club = $offer->getClubPrice();
 
         $render[] = 'Розничная цена:';
-        $render[] = substr($base, 0, -2);
+        $render[] = $base;
         $render[] = "";
         $render[] = 'Клубная цена:';
-        $render[] = substr($club, 0, -2);
+        $render[] = $club;
         $render[] = "";
 
         return implode("\n", $render);
@@ -85,10 +92,6 @@ class ProductController implements AppControllerInterface
     {
         $offer = new ProductOffer();
 
-        preg_match_all('(\d*|\.|\,)', $item['PRICE_FORMATED'], $basePrice);
-        $basePrice = array_filter($basePrice[0]);
-        $basePrice = floatval(implode("", $basePrice));
-
         $offer->fromArray(array(
             'code'      => $item['CODE'],
             'name'      => $item['NAME'],
@@ -98,8 +101,24 @@ class ProductController implements AppControllerInterface
             'link'      => $item['REFFERAL_LINK'],
             'form'      => $item['FORM'],
             'currency'  => $currency,
-            'basePrice' => $basePrice
+            'basePrice' => $item['PRICE_BASE'],
+            'clubPrice' => $item['PRICE_CLUB']
         ));
         return $offer;
+    }
+
+    /**
+     * @param string|null $current
+     * @return array
+     */
+    function getCurrencies(string $current = null): array
+    {
+        $result = $this->currencies;
+        if (!is_null($current)) {
+            $result = array_filter($result, function($item) use ($current) {
+                return $item != $current;
+            });
+        }
+        return $result;
     }
 }

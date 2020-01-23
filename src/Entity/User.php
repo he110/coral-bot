@@ -68,11 +68,11 @@ class User extends ArraySerializer
     }
 
     /**
-     * @return string|null
+     * @return string
      */
-    public function getCurrency(): ?string
+    public function getCurrency(): string
     {
-        return $this->currency;
+        return $this->currency ?? "RUB";
     }
 
     /**

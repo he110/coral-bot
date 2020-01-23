@@ -139,11 +139,22 @@ trait EventHandlers
         $user = $application->getUser();
 
         $controller = new ProductController($application);
-        if ($offer = $controller->getOfferById($application->getContent(), $user->getCurrency() ?? 'RUB')) {
+        if ($offer = $controller->getOfferById($application->getContent(), $user->getCurrency())) {
             $bot->sendChatAction($application->getChatId(), 'upload_photo');
 
+            $buttons = array();
+
+            if ($currencies = $controller->getCurrencies($user->getCurrency())) {
+                foreach($currencies as $currency) {
+                    $buttons[] = array(
+                        'text' => $currency,
+                        'callback_data' => '!currency='.$currency
+                    );
+                }
+            }
 
             $keyboardMarkup = array(
+                $buttons,
                 array(
                     array(
                         'text' => 'В магазин',
@@ -172,7 +183,7 @@ trait EventHandlers
 
         $controller = new ProductController($application);
 
-        if ($list = $controller->search($application->getContent(), $user->getCurrency() ?? 'RUB')) {
+        if ($list = $controller->search($application->getContent(), $user->getCurrency())) {
             switch (count($list)) {
                 case 0:
                     $bot->sendMessage($application->getChatId(), 'По вашему запросу ничего не найдено');

@@ -157,11 +157,11 @@ class ProductController implements AppControllerInterface
             'thumbnail' => $item['PREVIEW_PICTURE'],
             'description' => $item['DETAIL_TEXT'],
             'link'      => $item['REFFERAL_LINK'],
-            'form'      => $item['FORM'],
+            'form'      => $item['FORM'] ?? null,
             'currency'  => $currency,
-            'basePrice' => floatval($prices['base']),
-            'clubPrice' => floatval($prices['club']),
-            'refLink'   => $item['REFFERAL_LINK']
+            'basePrice' => floatval($prices['base']) ?? 0.0,
+            'clubPrice' => floatval($prices['club']) ?? 0.0,
+            'refLink'   => $item['REFFERAL_LINK'] ?? null
         ));
         return $offer;
     }

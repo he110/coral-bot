@@ -187,9 +187,6 @@ trait EventHandlers
 
         if ($list = $controller->search($application->getContent(), $user->getCurrency())) {
             switch (count($list)) {
-                case 0:
-                    $bot->sendMessage($application->getChatId(), 'По вашему запросу ничего не найдено');
-                    break;
                 case 1:
                     /** @var ProductOffer $offer */
                     $offer = current($list);
@@ -218,6 +215,8 @@ trait EventHandlers
                     $bot->sendMessage($application->getChatId(), 'Пожалуйста, выберите продукт', 'html', null, false, $keyboard);
                     break;
             }
+        } else {
+            $bot->sendMessage($application->getChatId(), 'По вашему запросу ничего не найдено');
         }
     }
 

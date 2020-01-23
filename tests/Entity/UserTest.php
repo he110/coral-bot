@@ -21,7 +21,8 @@ class UserTest extends TestCase
         'name' => 'Demo user',
         'country' => 'RU',
         'currency' => 'RUB',
-        'lastOffer' => 1000
+        'member' => null,
+        'options' => array()
     );
 
     public function testToArray()
@@ -49,8 +50,7 @@ class UserTest extends TestCase
         $this->user->setName($this->demoData['name'])
             ->setId($this->demoData['id'])
             ->setCountry($this->demoData['country'])
-            ->setCurrency($this->demoData['currency'])
-            ->setLastOffer($this->demoData['lastOffer']);
+            ->setCurrency($this->demoData['currency']);
     }
 
     public function tearDown()

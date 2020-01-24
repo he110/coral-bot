@@ -23,7 +23,7 @@ class Application extends ProductHelper
 {
     use EventHandlers;
 
-    const VERSION = '0.3.0';
+    const VERSION = '0.3.1';
 
     /** @var LoggerInterface|null */
     private $logger;
@@ -139,8 +139,7 @@ class Application extends ProductHelper
      * Выполняет основную работу. Разбирает и анализирует данные от сервера телеграм, определяет
      * события и вызывает необходимый обработчик
      *
-     * @throws UnknownEventException
-     * @throws \TelegramBot\Api\InvalidJsonException
+     * @throws \Exception
      */
     public function run(): void
     {
@@ -152,7 +151,7 @@ class Application extends ProductHelper
                 $app->fetchDataFromMessage($message);
             });
 
-            $this->getService()->command('changeCountry', function (Message $message) use ($app) {
+            $this->getService()->command('country', function (Message $message) use ($app) {
                 $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
                 $app->fetchDataFromMessage($message);
                 if ($user = $app->getUser()) {
@@ -237,6 +236,7 @@ class Application extends ProductHelper
                 'error' => $e->getMessage(),
                 'user' => $this->getUser() ? $this->getUser()->toArray() : array()
             ));
+            throw $e;
         }
     }
 

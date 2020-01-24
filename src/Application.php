@@ -23,7 +23,7 @@ class Application extends ProductHelper
 {
     use EventHandlers;
 
-    const VERSION = '0.2.4';
+    const VERSION = '0.3.0';
 
     /** @var LoggerInterface|null */
     private $logger;

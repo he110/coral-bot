@@ -151,6 +151,16 @@ class Application extends ProductHelper
             $app->fetchDataFromMessage($message);
         });
 
+        $this->getService()->command('changeCountry', function(Message $message) use ($app) {
+            $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
+            $app->fetchDataFromMessage($message);
+            if ($user = $app->getUser()) {
+                $user->setCountry(null);
+                if ($manager = $app->getDataManager())
+                    $manager->save($user->getId(), $user->toArray());
+            }
+        });
+
         $this->getService()->command('version', function(Message $message) use ($app) {
              $app->setEvent(Application::EVENT_VERSION);
              $app->fetchDataFromMessage($message);
@@ -203,8 +213,9 @@ class Application extends ProductHelper
 
         $this->getService()->run();
 
-        if (is_null($this->getEvent()))
+        if (is_null($this->getEvent())) {
             throw new UnknownEventException("Got an unknown event");
+        }
 
         $this->triggerEvent($this->getEvent());
     }

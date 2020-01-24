@@ -144,80 +144,100 @@ class Application extends ProductHelper
      */
     public function run(): void
     {
-        $app = &$this;
+        try {
+            $app = &$this;
 
-        $this->getService()->command('start', function(Message $message) use ($app) {
-            $app->setEvent(Application::EVENT_START);
-            $app->fetchDataFromMessage($message);
-        });
+            $this->getService()->command('start', function (Message $message) use ($app) {
+                $app->setEvent(Application::EVENT_START);
+                $app->fetchDataFromMessage($message);
+            });
 
-        $this->getService()->command('changeCountry', function(Message $message) use ($app) {
-            $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
-            $app->fetchDataFromMessage($message);
-            if ($user = $app->getUser()) {
-                $user->setCountry(null);
-                if ($manager = $app->getDataManager())
-                    $manager->save($user->getId(), $user->toArray());
-            }
-        });
+            $this->getService()->command('changeCountry', function (Message $message) use ($app) {
+                $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
+                $app->fetchDataFromMessage($message);
+                if ($user = $app->getUser()) {
+                    $user->setCountry(null);
+                    if ($manager = $app->getDataManager()) {
+                        $manager->save($user->getId(), $user->toArray());
+                    }
+                }
+            });
 
-        $this->getService()->command('version', function(Message $message) use ($app) {
-             $app->setEvent(Application::EVENT_VERSION);
-             $app->fetchDataFromMessage($message);
-        });
+            $this->getService()->command('version', function (Message $message) use ($app) {
+                $app->setEvent(Application::EVENT_VERSION);
+                $app->fetchDataFromMessage($message);
+            });
 
-        $this->getService()->on(function(Update $update) use ($app) {
-            if (!$message = $update->getMessage())
-                return;
-            $app->fetchDataFromMessage($message);
+            $this->getService()->on(function (Update $update) use ($app) {
+                if (!$message = $update->getMessage()) {
+                    return;
+                }
+                $app->fetchDataFromMessage($message);
 
-            if ($app->isUserAuthorized() && $app->getUser()->getCountry() && $app->isOfferCode($app->getContent()))
-                $app->setEvent(Application::EVENT_GET_OFFER); //Если авторизован, выбрана страна и пришло число - ищет по артикулу
-            elseif (!$this->isUserAuthorized())
-                $app->setEvent(Application::EVENT_LOGIN); // Если не авторизован, отправляем в на авторизацию
-            elseif ($this->isUserAuthorized() && is_null($app->getUser()->getCountry()))
-                $app->setEvent(Application::EVENT_GET_COUNTRY_LIST); //Если авторизован, но не выбрал страну, отправляем на выбор стран
-            elseif ($this->isUserAuthorized() && !is_null($app->getUser()->getCountry()))
-                $app->setEvent(Application::EVENT_SEARCH); // Если авторизован и выбрал страну, но пришло не число, значит что-то ищет
-        }, function (Update $update) { return true; });
-
-        $this->getService()->callbackQuery(function(CallbackQuery $query) use ($app) {
-            $message = $query->getMessage();
-            $message->setFrom($query->getFrom());
-            $app->fetchDataFromMessage($message, array('callback' => $query->getId()));
-
-            preg_match('/\!(.*?)=(.*)/', $query->getData(), $commandMatch);
-            if (!isset($commandMatch[1]) || !isset($commandMatch[2]))
-                return;
-
-            list($command, $value) = array_slice($commandMatch, 1);
-            $app->setContent($value);
-
-            switch ($command) {
-                case 'product':
-                    $app->setEvent(Application::EVENT_GET_PRODUCT);
-                    break;
-                case 'offer':
+                if ($app->isUserAuthorized() && $app->getUser()->getCountry() && $app->isOfferCode($app->getContent())) {
                     $app->setEvent(Application::EVENT_GET_OFFER);
-                    break;
-                case 'country':
-                    $app->setEvent(Application::EVENT_SET_COUNTRY);
-                    break;
-                case 'currency':
-                    $app->setEvent(Application::EVENT_SET_CURRENCY);
-                    break;
-                default:
-                    break;
+                } //Если авторизован, выбрана страна и пришло число - ищет по артикулу
+                elseif (!$this->isUserAuthorized()) {
+                    $app->setEvent(Application::EVENT_LOGIN);
+                } // Если не авторизован, отправляем в на авторизацию
+                elseif ($this->isUserAuthorized() && is_null($app->getUser()->getCountry())) {
+                    $app->setEvent(Application::EVENT_GET_COUNTRY_LIST);
+                } //Если авторизован, но не выбрал страну, отправляем на выбор стран
+                elseif ($this->isUserAuthorized() && !is_null($app->getUser()->getCountry())) {
+                    $app->setEvent(Application::EVENT_SEARCH);
+                } // Если авторизован и выбрал страну, но пришло не число, значит что-то ищет
+            }, function (Update $update) {
+                return true;
+            });
+
+            $this->getService()->callbackQuery(function (CallbackQuery $query) use ($app) {
+                $message = $query->getMessage();
+                $message->setFrom($query->getFrom());
+                $app->fetchDataFromMessage($message, array('callback' => $query->getId()));
+
+                preg_match('/\!(.*?)=(.*)/', $query->getData(), $commandMatch);
+                if (!isset($commandMatch[1]) || !isset($commandMatch[2])) {
+                    return;
+                }
+
+                list($command, $value) = array_slice($commandMatch, 1);
+                $app->setContent($value);
+
+                switch ($command) {
+                    case 'product':
+                        $app->setEvent(Application::EVENT_GET_PRODUCT);
+                        break;
+                    case 'offer':
+                        $app->setEvent(Application::EVENT_GET_OFFER);
+                        break;
+                    case 'country':
+                        $app->setEvent(Application::EVENT_SET_COUNTRY);
+                        break;
+                    case 'currency':
+                        $app->setEvent(Application::EVENT_SET_CURRENCY);
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+            $this->getService()->run();
+
+            if (is_null($this->getEvent())) {
+                $this->logger && $this->logger->critical("Unknown event", $this->debugData());
+                throw new UnknownEventException("Got an unknown event");
             }
-        });
 
-        $this->getService()->run();
+            $this->logger && $this->logger->debug("Got new event", $this->debugData());
 
-        if (is_null($this->getEvent())) {
-            throw new UnknownEventException("Got an unknown event");
+            $this->triggerEvent($this->getEvent());
+        } catch (\Exception $e) {
+            $this->logger && $this->logger->emergency('Critical error', array(
+                'event' => $this->getEvent(),
+                'error' => $e->getMessage(),
+                'user' => $this->getUser() ? $this->getUser()->toArray() : array()
+            ));
         }
-
-        $this->triggerEvent($this->getEvent());
     }
 
     /**
@@ -230,13 +250,17 @@ class Application extends ProductHelper
     public function triggerEvent(string $event): self
     {
         if (isset($this->eventHandlers[$event])) {
+            $this->logger && $this->logger->debug("Found custom event handler", $this->debugData());
             $this->eventHandlers[$event]($this);
             return $this;
         }
 
-        if (!method_exists($this, $event))
-            throw new UnknownEventException("Can't find handler for event ".$event);
+        if (!method_exists($this, $event)) {
+            $this->logger && $this->logger->critical("Event handler can't be found", $this->debugData());
+            throw new UnknownEventException("Can't find handler for event " . $event);
+        }
 
+        $this->logger && $this->logger->debug("Event handler successfully found", $this->debugData());
         $this->{$event}($this);
 
         return $this;
@@ -270,6 +294,16 @@ class Application extends ProductHelper
             $this->getDataManager()->save($message->getFrom()->getId(), $user->toArray());
             $this->user = $user;
         }
+    }
+
+
+    public function debugData(User $user = null):array
+    {
+        $user = is_null($user) ? $this->getUser() : $user;
+        return array(
+            'event' => $this->getEvent(),
+            'user' => $user ? $user->toArray() : array()
+        );
     }
 
     /**

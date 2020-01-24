@@ -12,7 +12,6 @@ namespace He110\Coral\Bot;
 use He110\Coral\Bot\Controller\ProductController;
 use He110\Coral\Bot\Controller\UserController;
 use He110\Coral\Bot\Entity\ProductOffer;
-use He110\Coral\Bot\Entity\User;
 use TelegramBot\Api\BotApi;
 use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 
@@ -33,17 +32,31 @@ trait EventHandlers
         sleep(Application::PAUSES);
 
         if ($application->getUser() && $application->getDataManager()) {
+            $application->getLogger() && $application->getLogger()->debug(
+                "User requested data reset",
+                $application->debugData()
+            );
             $application->getDataManager()->reset($application->getUser()->getId());
         }
 
         $bot->sendMessage($application->getChatId(), 'Добро пожаловать! Пожалуйста, введите ваш клубный номер');
     }
 
+    /**
+     * Запрошена текущая версия бота
+     *
+     * @param Application $application
+     * @throws \TelegramBot\Api\Exception
+     * @throws \TelegramBot\Api\InvalidArgumentException
+     */
     public function version(Application &$application)
     {
         /** @var BotApi $bot */
         $bot = $application->getService();
-
+        $application->getLogger() && $application->getLogger()->debug(
+            "User requested bot version",
+            $application->debugData()
+        );
         $bot->sendMessage($application->getChatId(), 'CoralBot v'.Application::VERSION);
     }
 
@@ -68,8 +81,16 @@ trait EventHandlers
             $user->setMember($application->getContent());
             if ($manager = $application->getDataManager())
                 $manager->save($user->getId(), $user->toArray());
+            $application->getLogger() && $application->getLogger()->debug(
+                "User just logged in",
+                $application->debugData($user)
+            );
             $application->triggerEvent(Application::EVENT_GET_COUNTRY_LIST);
         } else {
+            $application->getLogger() && $application->getLogger()->debug(
+                "User entered wrong member id",
+                $application->debugData($user)
+            );
             $bot->sendMessage($application->getChatId(), "Для продолжения необходимо ввести корректный клубный номер");
         }
     }
@@ -107,6 +128,10 @@ trait EventHandlers
                 }
                 $keyboard = new InlineKeyboardMarkup($keyboardMarkup);
                 $bot->sendMessage($application->getChatId(), 'Пожалуйста, выберите страну', false, null, false, $keyboard);
+                $application->getLogger() && $application->getLogger()->debug(
+                    "Country list requested",
+                    $application->debugData($user)
+                );
             } else {
                 $country = current($countries);
                 $bot->sendMessage($application->getChatId(), 'Страна выбрана автоматически: '.$country['NAME']);
@@ -114,9 +139,17 @@ trait EventHandlers
                 $user->setCountry($country['ALPHA_2']);
                 if ($manager = $application->getDataManager())
                     $manager->save($user->getId(), $user->toArray());
+                $application->getLogger() && $application->getLogger()->debug(
+                    "Country was set automatically, cause there's only one",
+                    $application->debugData($user)
+                );
             }
         } else {
             $bot->sendMessage($application->getChatId(), 'Не удалось загрузить список стран. Пожалуйста, повторите попытку позже');
+            $application->getLogger() && $application->getLogger()->critical(
+                "Can't get country list",
+                $application->debugData($user)
+            );
             $application->triggerEvent(Application::EVENT_START);
         }
     }
@@ -139,7 +172,10 @@ trait EventHandlers
         $user->setCountry($application->getContent());
         if ($manager = $application->getDataManager())
             $manager->save($user->getId(), $user->toArray());
-
+        $application->getLogger() && $application->getLogger()->debug(
+            "Country successfully set",
+            $application->debugData($user)
+        );
         $bot->sendMessage($application->getChatId(), 'Все готово! Введите артикул товара или поисковой запрос для начала работы');
     }
 
@@ -171,7 +207,15 @@ trait EventHandlers
                 ->setOption('lastMessageId', $m->getMessageId());
             if ($manager = $application->getDataManager())
                 $manager->save($user->getId(), $user->toArray());
+            $application->getLogger() && $application->getLogger()->debug(
+                "Requested offer",
+                $application->debugData($user)
+            );
         } else {
+            $application->getLogger() && $application->getLogger()->debug(
+                "Offer can't be fount by code",
+                $application->debugData($user)
+            );
             $application->triggerEvent(Application::EVENT_SEARCH);
         }
     }
@@ -190,6 +234,10 @@ trait EventHandlers
                     /** @var ProductOffer $offer */
                     $offer = current($list);
                     $application->setContent($offer->getCode());
+                    $application->getLogger() && $application->getLogger()->debug(
+                        "Found only one offer at search handler",
+                        $application->debugData($user)
+                    );
                     $application->triggerEvent(Application::EVENT_GET_OFFER);
                     break;
                 default:
@@ -212,10 +260,18 @@ trait EventHandlers
 
                     $keyboard = new InlineKeyboardMarkup($keyboardMarkup);
                     $bot->sendMessage($application->getChatId(), 'Пожалуйста, выберите продукт', 'html', null, false, $keyboard);
+                    $application->getLogger() && $application->getLogger()->debug(
+                        "Search successfully done",
+                        $application->debugData($user)
+                    );
                     break;
             }
         } else {
             $bot->sendMessage($application->getChatId(), 'По вашему запросу ничего не найдено');
+            $application->getLogger() && $application->getLogger()->debug(
+                "Can't find any offers",
+                $application->debugData($user)
+            );
         }
     }
 

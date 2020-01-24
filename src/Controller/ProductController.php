@@ -73,7 +73,7 @@ class ProductController implements AppControllerInterface
 
     function renderOffer(ProductOffer $offer): string
     {
-        $lineCount = 40;
+        $lineCount = 33;
         $render = array();
         $render[] = $offer->getName();
         $render[] = str_repeat("–", $lineCount);
